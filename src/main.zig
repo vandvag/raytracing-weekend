@@ -1,6 +1,11 @@
 const std = @import("std");
 const Progress = std.Progress;
 
+const color = @import("color.zig");
+const Color = color.Color;
+const vec = @import("vec.zig");
+const Vec3 = vec.Vec3;
+
 const IMG_WIDTH = 256;
 const IMG_HEIGHT = 256;
 
@@ -24,11 +29,13 @@ pub fn main() !void {
         for (0..IMG_WIDTH) |w| {
             const h_float: f32 = @floatFromInt(h);
             const w_float: f32 = @floatFromInt(w);
-            const r: u8 = @intFromFloat(255.999 * (w_float / (IMG_WIDTH - 1)));
-            const g: u8 = @intFromFloat(255.999 * (h_float / (IMG_HEIGHT - 1)));
-            const b: u8 = 0;
+            const pixel_color = color.fromVec3(.{
+                w_float / (IMG_WIDTH - 1),
+                h_float / (IMG_HEIGHT - 1),
+                0.0,
+            });
 
-            try out.print("{d} {d} {d}\n", .{ r, g, b });
+            try out.print("{f}", .{pixel_color});
         }
     }
 
