@@ -18,7 +18,8 @@ const IMG_HEIGHT = blk: {
 
 const VIEWPORT_HEIGHT = 2.0;
 const VIEWPORT_WIDTH = blk: {
-    const ratio: comptime_float = @floatFromInt(IMG_WIDTH / IMG_HEIGHT);
+    const ratio = (IMG_WIDTH + 0.0) / (IMG_HEIGHT + 0.0);
+    // const ratio: comptime_float = @floatFromInt(IMG_WIDTH / IMG_HEIGHT);
     break :blk ratio * VIEWPORT_HEIGHT;
 };
 
