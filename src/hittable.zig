@@ -18,8 +18,8 @@ pub const HitRecord = struct {
 
     pub fn init(t: f64, r: Ray, point: Vec3, outward_normal: Vec3) Self {
         if (builtin.mode == .Debug) {
-            // const one = vec.len2(outward_normal);
-            // assert(std.math.approxEqAbs(f64, one, 1.0, std.math.floatEps(f64)));
+            const one = vec.len2(outward_normal);
+            assert(std.math.approxEqAbs(f64, one, 1.0, 0.0000000001));
         }
 
         const front_face = vec.dot(r.direction(), outward_normal) < 0.0;

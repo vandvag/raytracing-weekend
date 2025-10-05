@@ -3,21 +3,16 @@ const Progress = std.Progress;
 
 const color = @import("color.zig");
 const Color = color.Color;
-
-const Ray = @import("ray.zig").Ray;
-
-const vec = @import("vec.zig");
-const Vec3 = vec.Vec3;
-
 const hitlist = @import("hittableList.zig");
 const HittableList = hitlist.HittableList;
-
 const ht = @import("hittable.zig");
 const Hittable = ht.Hittable;
-
+const Ray = @import("ray.zig").Ray;
 const Sphere = @import("sphere.zig").Sphere;
-
+const vec = @import("vec.zig");
+const Vec3 = vec.Vec3;
 const camera_center: Vec3 = vec.zero;
+
 const ASPECT_RATIO = 16.0 / 9.0;
 const IMG_WIDTH = 4000;
 const IMG_HEIGHT = blk: {
