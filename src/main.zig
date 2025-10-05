@@ -90,14 +90,14 @@ fn rayColor(r: Ray) Color {
 
 fn hitSphere(center: Vec3, radius: f64, r: Ray) f64 {
     const oc = center - r.origin();
-    const a = vec.dot(r.direction(), r.direction());
-    const b = -2.0 * vec.dot(r.direction(), oc);
-    const c = vec.dot(oc, oc) - radius * radius;
-    const discriminant = b * b - 4 * a * c;
+    const a = vec.len2(r.direction());
+    const h = vec.dot(r.direction(), oc);
+    const c = vec.len(oc) - radius * radius;
+    const discriminant = h * h - a * c;
 
     if (discriminant < 0) {
         return -1.0;
     }
 
-    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
+    return (h - std.math.sqrt(discriminant)) / a;
 }
