@@ -29,23 +29,14 @@ const focal_length = 1.0;
 const viewport_u: Vec3 = .{ VIEWPORT_WIDTH, 0.0, 0.0 };
 const viewport_v: Vec3 = .{ 0.0, -VIEWPORT_HEIGHT, 0.0 };
 // Calculate the horizontal and vertical delta vectors from pixel to pixel.
-const pixel_delta_u = blk: {
-    const img_w3: Vec3 = @splat(IMG_WIDTH);
-    break :blk viewport_u / img_w3;
-};
-const pixel_delta_v = blk: {
-    const img_h3: Vec3 = @splat(IMG_HEIGHT);
-    break :blk viewport_v / img_h3;
-};
+const pixel_delta_u = viewport_u / vec.splat(IMG_WIDTH);
+const pixel_delta_v = viewport_v / vec.splat(IMG_HEIGHT);
 // Calculate the location of the upper left pixel.
 const viewport_upper_left: Vec3 = blk: {
     const focal: Vec3 = .{ 0.0, 0.0, focal_length };
     break :blk camera_center - focal - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
 };
-const pixel_origin_location: Vec3 = blk: {
-    const half: Vec3 = @splat(0.5);
-    break :blk viewport_upper_left + (pixel_delta_u + pixel_delta_v) * half;
-};
+const pixel_origin_location: Vec3 = viewport_upper_left + (pixel_delta_u + pixel_delta_v) / vec.splat(2.0);
 
 pub fn main() !void {
     var wbuffer: [4096]u8 = undefined;
@@ -65,7 +56,7 @@ pub fn main() !void {
     for (0..IMG_HEIGHT) |h| {
         progress.completeOne();
         for (0..IMG_WIDTH) |w| {
-            const pixel_center = pixel_origin_location + vec.splat(w) * pixel_delta_u + vec.splat(h) * pixel_delta_v;
+            const pixel_center = pixel_origin_location + (vec.splat(w) * pixel_delta_u) + (vec.splat(h) * pixel_delta_v);
             const ray_direction = pixel_center - camera_center;
             const ray: Ray = .{
                 ._origin = camera_center,
@@ -82,8 +73,23 @@ pub fn main() !void {
 }
 
 fn rayColor(r: Ray) Color {
+    const sphere_center: Vec3 = .{ 0.0, 0.0, -1.0 };
+    const radius = 0.5;
+    if (hitSphere(sphere_center, radius, r)) {
+        return color.fromVec3(.{ 1.0, 0.0, 0.0 });
+    }
+
     const unit_direction = vec.unit(r.direction());
     const a = 0.5 * (vec.y(unit_direction) + 1.0);
-    const blue: Vec3 = .{0.5, 0.7, 1.0};
+    const blue: Vec3 = .{ 0.5, 0.7, 1.0 };
     return color.fromVec3(vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue);
+}
+
+fn hitSphere(center: Vec3, radius: f64, r: Ray) bool {
+    const oc = center - r.origin();
+    const a = vec.dot(r.direction(), r.direction());
+    const b = -2.0 * vec.dot(r.direction(), oc);
+    const c = vec.dot(oc, oc) - radius * radius;
+    const discriminant = b * b - 4 * a * c;
+    return (discriminant >= 0);
 }
