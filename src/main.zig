@@ -3,11 +3,21 @@ const Progress = std.Progress;
 
 const color = @import("color.zig");
 const Color = color.Color;
+
 const Ray = @import("ray.zig").Ray;
+
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
-const camera_center: Vec3 = vec.zero;
 
+const hitlist = @import("hittableList.zig");
+const HittableList = hitlist.HittableList;
+
+const ht = @import("hittable.zig");
+const Hittable = ht.Hittable;
+
+const Sphere = @import("sphere.zig").Sphere;
+
+const camera_center: Vec3 = vec.zero;
 const ASPECT_RATIO = 16.0 / 9.0;
 const IMG_WIDTH = 4000;
 const IMG_HEIGHT = blk: {
@@ -39,6 +49,9 @@ const viewport_upper_left: Vec3 = blk: {
 const pixel_origin_location: Vec3 = viewport_upper_left + (pixel_delta_u + pixel_delta_v) / vec.splat(2.0);
 
 pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const allocator = gpa.allocator();
+
     var wbuffer: [4096]u8 = undefined;
     var file_writer = std.fs.File.stdout().writer(&wbuffer);
     const out = &file_writer.interface;
@@ -50,6 +63,25 @@ pub fn main() !void {
         .root_name = "Rendering",
     });
     defer progress.end();
+
+    // World stuff
+    var world = HittableList.init(allocator);
+    defer world.deinit();
+    const sph1: Hittable = .{
+        .Sphere = .{
+            .center = .{ 0.0, 0.0, -1.0 },
+            .radius = 0.5,
+        },
+    };
+    try world.add(sph1);
+
+    const sph2: Hittable = .{
+        .Sphere = .{
+            .center = .{ 0.0, -100.5, -1.0 },
+            .radius = 100,
+        },
+    };
+    try world.add(sph2);
 
     try out.print("P3\n{d} {d}\n255\n", .{ IMG_WIDTH, IMG_HEIGHT });
 
@@ -63,7 +95,7 @@ pub fn main() !void {
                 ._direction = vec.unit(ray_direction),
             };
 
-            const pixel_color = rayColor(ray);
+            const pixel_color = rayColor(ray, &world);
 
             try out.print("{f}", .{pixel_color});
         }
@@ -72,14 +104,10 @@ pub fn main() !void {
     try out.flush();
 }
 
-fn rayColor(r: Ray) Color {
-    const sphere_center: Vec3 = .{ 0.0, 0.0, -1.0 };
-    const radius = 0.5;
-    const t = hitSphere(sphere_center, radius, r);
-    if (t > 0.0) {
-        const v: Vec3 = .{0.0, 0.0, -1.0};
-        const normal: Vec3 = vec.unit(r.at(t) - v);
-        return color.fromVec3(vec.splat(0.5) * (normal + vec.one));
+fn rayColor(r: Ray, world: *HittableList) Color {
+    // TODO FIX the float max to infinity
+    if (world.hit(r, 0, std.math.floatMax(f64))) |hr| {
+        return color.fromVec3(vec.splat(0.5) * (hr.normal + vec.one));
     }
 
     const unit_direction = vec.unit(r.direction());
