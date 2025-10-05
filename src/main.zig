@@ -1,6 +1,7 @@
 const std = @import("std");
 const Progress = std.Progress;
 
+const Interval = @import("interval.zig").Interval;
 const color = @import("color.zig");
 const Color = color.Color;
 const hitlist = @import("hittableList.zig");
@@ -100,8 +101,8 @@ pub fn main() !void {
 }
 
 fn rayColor(r: Ray, world: *HittableList) Color {
-    // TODO FIX the float max to infinity
-    if (world.hit(r, 0, std.math.floatMax(f64))) |hr| {
+    const initial_interval: Interval = .{ .min = 0, .max = std.math.inf(f64) };
+    if (world.hit(r, initial_interval)) |hr| {
         return color.fromVec3(vec.splat(0.5) * (hr.normal + vec.one));
     }
 

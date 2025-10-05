@@ -1,9 +1,14 @@
 const std = @import("std");
+
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
+
 const Ray = @import("ray.zig").Ray;
+
 const hittable = @import("hittable.zig");
 const HitRecord = hittable.HitRecord;
+
+const Interval = @import("interval.zig").Interval;
 
 pub const Sphere = struct {
     center: Vec3,
@@ -11,7 +16,7 @@ pub const Sphere = struct {
 
     const Self = @This();
 
-    pub fn hit(self: *const Self, r: Ray, ray_tmin: f64, ray_tmax: f64) ?HitRecord {
+    pub fn hit(self: *const Self, r: Ray, interval: Interval) ?HitRecord {
         const oc = self.center - r.origin();
         const a = vec.len2(r.direction());
         const h = vec.dot(r.direction(), oc);
@@ -25,9 +30,9 @@ pub const Sphere = struct {
         const discr_sqrt = std.math.sqrt(discriminant);
 
         var root = (h - discr_sqrt) / a;
-        if (root <= ray_tmin or root >= ray_tmax) {
+        if (!interval.surrounds(root)) {
             root = (h + discr_sqrt) / a;
-            if (root <= ray_tmin or root >= ray_tmax) {
+            if (!interval.surrounds(root)) {
                 return null;
             }
         }

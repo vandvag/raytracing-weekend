@@ -3,10 +3,15 @@ const assert = std.debug.assert;
 const builtin = @import("builtin");
 
 const Ray = @import("ray.zig").Ray;
+
 const sphr = @import("sphere.zig");
 const Sphere = sphr.Sphere;
+
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
+
+const intrv = @import("interval.zig");
+const Interval = intrv.Interval;
 
 pub const HitRecord = struct {
     t: f64,
@@ -37,9 +42,9 @@ pub const Hittable = union(enum) {
     Sphere: Sphere,
 
     const Self = @This();
-    pub fn hit(self: Self, r: Ray, ray_min: f64, ray_max: f64) ?HitRecord {
+    pub fn hit(self: Self, r: Ray, interval: Interval) ?HitRecord {
         return switch (self) {
-            .Sphere => |s| s.hit(r, ray_min, ray_max),
+            .Sphere => |s| s.hit(r, interval),
         };
     }
 };

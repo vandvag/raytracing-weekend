@@ -1,10 +1,12 @@
 const std = @import("std");
-const hit = @import("hittable.zig");
 
+const hit = @import("hittable.zig");
 const Hittable = hit.Hittable;
 const HitRecord = hit.HitRecord;
+
 const Ray = @import("ray.zig").Ray;
 
+const Interval = @import("interval.zig").Interval;
 
 pub const HittableList = struct {
     objects: std.ArrayList(Hittable),
@@ -13,7 +15,7 @@ pub const HittableList = struct {
     const Self = @This();
 
     pub fn init(allocator: std.mem.Allocator) Self {
-        return Self {
+        return Self{
             .objects = std.ArrayList(Hittable).empty,
             .allocator = allocator,
         };
@@ -27,11 +29,11 @@ pub const HittableList = struct {
         try self.objects.append(self.allocator, obj);
     }
 
-    pub fn hit(self: *Self, r: Ray, ray_tmin: f64, ray_tmax: f64) ?HitRecord {
-        var closest_so_far = ray_tmax;
+    pub fn hit(self: *Self, r: Ray, interval: Interval) ?HitRecord {
+        var closest_so_far = interval.max;
         var hit_record: ?HitRecord = null;
         for (self.objects.items) |obj| {
-            const hr =obj.hit(r, ray_tmin, closest_so_far) orelse continue;
+            const hr = obj.hit(r, .{ .min = interval.min, .max = closest_so_far }) orelse continue;
 
             hit_record = hr;
             closest_so_far = hr.t;
