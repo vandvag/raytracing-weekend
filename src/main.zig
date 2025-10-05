@@ -75,8 +75,11 @@ pub fn main() !void {
 fn rayColor(r: Ray) Color {
     const sphere_center: Vec3 = .{ 0.0, 0.0, -1.0 };
     const radius = 0.5;
-    if (hitSphere(sphere_center, radius, r)) {
-        return color.fromVec3(.{ 1.0, 0.0, 0.0 });
+    const t = hitSphere(sphere_center, radius, r);
+    if (t > 0.0) {
+        const v: Vec3 = .{0.0, 0.0, -1.0};
+        const normal: Vec3 = vec.unit(r.at(t) - v);
+        return color.fromVec3(vec.splat(0.5) * (normal + vec.one));
     }
 
     const unit_direction = vec.unit(r.direction());
@@ -85,11 +88,16 @@ fn rayColor(r: Ray) Color {
     return color.fromVec3(vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue);
 }
 
-fn hitSphere(center: Vec3, radius: f64, r: Ray) bool {
+fn hitSphere(center: Vec3, radius: f64, r: Ray) f64 {
     const oc = center - r.origin();
     const a = vec.dot(r.direction(), r.direction());
     const b = -2.0 * vec.dot(r.direction(), oc);
     const c = vec.dot(oc, oc) - radius * radius;
     const discriminant = b * b - 4 * a * c;
-    return (discriminant >= 0);
+
+    if (discriminant < 0) {
+        return -1.0;
+    }
+
+    return (-b - std.math.sqrt(discriminant)) / (2.0 * a);
 }

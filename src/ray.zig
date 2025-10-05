@@ -13,6 +13,6 @@ pub const Ray = struct {
     }
 
     pub fn at(self: *const Ray, t: f64) vec.Vec3 {
-        return self._origin + t * self._direction;
+        return self._origin + vec.splat(t) * self._direction;
     }
 };
