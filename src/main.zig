@@ -9,7 +9,7 @@ const Vec3 = vec.Vec3;
 const camera_center: Vec3 = vec.zero;
 
 const ASPECT_RATIO = 16.0 / 9.0;
-const IMG_WIDTH = 400;
+const IMG_WIDTH = 4000;
 const IMG_HEIGHT = blk: {
     const width_float: comptime_float = @floatFromInt(IMG_WIDTH);
     const height: comptime_int = @intFromFloat(width_float / ASPECT_RATIO);
@@ -46,7 +46,7 @@ pub fn main() !void {
     var progress_buffer: [1024]u8 = undefined;
     const progress = Progress.start(.{
         .draw_buffer = &progress_buffer,
-        .estimated_total_items = IMG_HEIGHT * IMG_WIDTH,
+        .estimated_total_items = IMG_HEIGHT,
         .root_name = "Rendering",
     });
     defer progress.end();
@@ -54,7 +54,7 @@ pub fn main() !void {
     try out.print("P3\n{d} {d}\n255\n", .{ IMG_WIDTH, IMG_HEIGHT });
 
     for (0..IMG_HEIGHT) |h| {
-        progress.completeOne();
+        defer progress.completeOne();
         for (0..IMG_WIDTH) |w| {
             const pixel_center = pixel_origin_location + (vec.splat(w) * pixel_delta_u) + (vec.splat(h) * pixel_delta_v);
             const ray_direction = pixel_center - camera_center;
