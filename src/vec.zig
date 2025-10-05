@@ -47,3 +47,16 @@ pub inline fn unit(v: Vec3) Vec3 {
     const splatted: Vec3 = @splat(length);
     return v / splatted;
 }
+
+pub fn splat(n: anytype) Vec3 {
+    const nT = @TypeOf(n);
+
+    return switch (@typeInfo(nT)) {
+        .int, .comptime_int => blk: {
+            const ret: f64 = @floatFromInt(n);
+            break :blk @splat(ret);
+        },
+        .float, .comptime_float => @splat(n),
+        else => @compileError("splat only works for int and float scalars"),
+    };
+}

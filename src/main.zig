@@ -3,11 +3,48 @@ const Progress = std.Progress;
 
 const color = @import("color.zig");
 const Color = color.Color;
+const Ray = @import("ray.zig").Ray;
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
+const camera_center: Vec3 = vec.zero;
 
-const IMG_WIDTH = 256;
-const IMG_HEIGHT = 256;
+const ASPECT_RATIO = 16.0 / 9.0;
+const IMG_WIDTH = 400;
+const IMG_HEIGHT = blk: {
+    const width_float: comptime_float = @floatFromInt(IMG_WIDTH);
+    const height: comptime_int = @intFromFloat(width_float / ASPECT_RATIO);
+    break :blk if (height < 1) 1 else height;
+};
+
+const VIEWPORT_HEIGHT = 2.0;
+const VIEWPORT_WIDTH = blk: {
+    const ratio: comptime_float = @floatFromInt(IMG_WIDTH / IMG_HEIGHT);
+    break :blk ratio * VIEWPORT_HEIGHT;
+};
+
+// Camera
+const focal_length = 1.0;
+// Calculate vectors accross the horizonttal and down the vertical viewport edges
+const viewport_u: Vec3 = .{ VIEWPORT_WIDTH, 0.0, 0.0 };
+const viewport_v: Vec3 = .{ 0.0, -VIEWPORT_HEIGHT, 0.0 };
+// Calculate the horizontal and vertical delta vectors from pixel to pixel.
+const pixel_delta_u = blk: {
+    const img_w3: Vec3 = @splat(IMG_WIDTH);
+    break :blk viewport_u / img_w3;
+};
+const pixel_delta_v = blk: {
+    const img_h3: Vec3 = @splat(IMG_HEIGHT);
+    break :blk viewport_v / img_h3;
+};
+// Calculate the location of the upper left pixel.
+const viewport_upper_left: Vec3 = blk: {
+    const focal: Vec3 = .{ 0.0, 0.0, focal_length };
+    break :blk camera_center - focal - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
+};
+const pixel_origin_location: Vec3 = blk: {
+    const half: Vec3 = @splat(0.5);
+    break :blk viewport_upper_left + (pixel_delta_u + pixel_delta_v) * half;
+};
 
 pub fn main() !void {
     var wbuffer: [4096]u8 = undefined;
@@ -27,17 +64,25 @@ pub fn main() !void {
     for (0..IMG_HEIGHT) |h| {
         progress.completeOne();
         for (0..IMG_WIDTH) |w| {
-            const h_float: f32 = @floatFromInt(h);
-            const w_float: f32 = @floatFromInt(w);
-            const pixel_color = color.fromVec3(.{
-                w_float / (IMG_WIDTH - 1),
-                h_float / (IMG_HEIGHT - 1),
-                0.0,
-            });
+            const pixel_center = pixel_origin_location + vec.splat(w) * pixel_delta_u + vec.splat(h) * pixel_delta_v;
+            const ray_direction = pixel_center - camera_center;
+            const ray: Ray = .{
+                ._origin = camera_center,
+                ._direction = vec.unit(ray_direction),
+            };
+
+            const pixel_color = rayColor(ray);
 
             try out.print("{f}", .{pixel_color});
         }
     }
 
     try out.flush();
+}
+
+fn rayColor(r: Ray) Color {
+    const unit_direction = vec.unit(r.direction());
+    const a = 0.5 * (vec.y(unit_direction) + 1.0);
+    const blue: Vec3 = .{0.5, 0.7, 1.0};
+    return color.fromVec3(vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue);
 }
