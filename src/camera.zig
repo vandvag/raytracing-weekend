@@ -87,7 +87,7 @@ fn rayColor(r: Ray, depth: usize, world: *HittableList) Vec3 {
         return vec.zero;
     }
 
-    const init: Interval = .{ .min = 0.0, .max = std.math.inf(f64) };
+    const init: Interval = .{ .min = 0.001, .max = std.math.inf(f64) };
     if (world.hit(r, init)) |hr| {
         const direction = vec.randomOnHemishere(hr.normal);
         return vec.splat(0.5) * rayColor(.{ ._origin = hr.point, ._direction = direction }, depth - 1, world);
