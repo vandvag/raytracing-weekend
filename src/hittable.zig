@@ -13,15 +13,18 @@ const Vec3 = vec.Vec3;
 const intrv = @import("interval.zig");
 const Interval = intrv.Interval;
 
+const mat = @import("material.zig");
+
 pub const HitRecord = struct {
     t: f64,
     point: Vec3,
     normal: Vec3,
     front_face: bool,
+    material: mat.Material,
 
     const Self = @This();
 
-    pub fn init(t: f64, r: Ray, point: Vec3, outward_normal: Vec3) Self {
+    pub fn init(t: f64, r: Ray, point: Vec3, outward_normal: Vec3, material: mat.Material) Self {
         if (builtin.mode == .Debug) {
             const one = vec.len2(outward_normal);
             assert(std.math.approxEqAbs(f64, one, 1.0, 0.0000000001));
@@ -34,6 +37,7 @@ pub const HitRecord = struct {
             .point = point,
             .normal = if (front_face) outward_normal else -outward_normal,
             .front_face = front_face,
+            .material = material,
         };
     }
 };

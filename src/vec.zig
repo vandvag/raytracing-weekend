@@ -95,3 +95,15 @@ pub fn randomOnHemishere(normal: Vec3) Vec3 {
 
     return if (dot(on_unit_shere, normal) > 0.0) on_unit_shere else -on_unit_shere;
 }
+
+/// Return true if the vector is close to zero in all dimensions
+pub fn nearZero(v: Vec3) bool {
+    const tol = 1e-8;
+    return std.math.approxEqAbs(f64, v[0], 0.0, tol) and
+        std.math.approxEqAbs(f64, v[1], 0.0, tol) and
+        std.math.approxEqAbs(f64, v[2], 0.0, tol);
+}
+
+pub fn reflect(v: Vec3, n: Vec3) Vec3 {
+    return v - splat(2.0 * dot(v, n)) * n;
+}

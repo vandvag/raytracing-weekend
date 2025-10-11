@@ -19,6 +19,8 @@ const Ray = @import("ray.zig").Ray;
 
 const Interval = @import("interval.zig").Interval;
 
+const mat = @import("material.zig");
+
 // TODO: Later, these should be input for the cli
 const img_width = if (builtin.mode == .ReleaseFast) 1000 else 400;
 const aspect_ratio = 16.0 / 9.0;
@@ -89,8 +91,10 @@ fn rayColor(r: Ray, depth: usize, world: *HittableList) Vec3 {
 
     const init: Interval = .{ .min = 0.001, .max = std.math.inf(f64) };
     if (world.hit(r, init)) |hr| {
-        const direction = vec.randomOnHemishere(hr.normal);
-        return vec.splat(0.5) * rayColor(.{ ._origin = hr.point, ._direction = direction }, depth - 1, world);
+        if (hr.material.scatter(r, hr)) |scatter| {
+            return scatter.attenuation * rayColor(scatter.ray, depth - 1, world);
+        }
+        return vec.zero;
     }
 
     const unit_direction = vec.unit(r.direction());

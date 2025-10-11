@@ -10,9 +10,12 @@ const HitRecord = hittable.HitRecord;
 
 const Interval = @import("interval.zig").Interval;
 
+const mat = @import("material.zig");
+
 pub const Sphere = struct {
     center: Vec3,
     radius: f64,
+    material: mat.Material,
 
     const Self = @This();
 
@@ -39,6 +42,6 @@ pub const Sphere = struct {
 
         const point = r.at(root);
         const outward_normal = (point - self.center) / vec.splat(self.radius);
-        return HitRecord.init(root, r, point, outward_normal);
+        return HitRecord.init(root, r, point, outward_normal, self.material);
     }
 };
