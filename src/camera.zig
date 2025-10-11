@@ -1,6 +1,8 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
+const rwt = @import("rtweekend.zig");
+
 const hittable = @import("hittable.zig");
 const Hittable = hittable.Hittable;
 
@@ -20,6 +22,7 @@ const Interval = @import("interval.zig").Interval;
 // TODO: Later, these should be input for the cli
 const img_width = if (builtin.mode == .ReleaseFast) 4000 else 400;
 const aspect_ratio = 16.0 / 9.0;
+const samples_per_pixel = if (builtin.mode == .ReleaseFast) 100 else 10;
 
 const width_float: comptime_float = @floatFromInt(img_width);
 const img_height = blk: {
@@ -64,32 +67,55 @@ pub fn render(world: *HittableList) !void {
     for (0..img_height) |h| {
         defer progress.completeOne();
         for (0..img_width) |w| {
-            const pixel_center = origin_pixel_location + (vec.splat(w) * pixel_delta_u) + (vec.splat(h) * pixel_delta_v);
-            const ray_direction = pixel_center - center;
-            const ray: Ray = .{
-                ._origin = center,
-                ._direction = ray_direction,
-            };
+            var pixel_color = vec.zero;
+            for (0..samples_per_pixel) |_| {
+                const ray = getRay(w, h);
+                pixel_color += rayColor(ray, world);
+            }
 
-            const pixel_color = rayColor(ray, world);
-
-            try out.print("{f}", .{pixel_color});
+            pixel_color /= vec.splat(samples_per_pixel);
+            try out.print("{f}", .{color.fromVec3(pixel_color)});
         }
     }
 
     try out.flush();
 }
 
-pub fn rayColor(r: Ray, world: *HittableList) Color {
-    const init: Interval = .{.min = 0.0, .max = std.math.inf(f64)};
+fn rayColor(r: Ray, world: *HittableList) Vec3 {
+    const init: Interval = .{ .min = 0.0, .max = std.math.inf(f64) };
     if (world.hit(r, init)) |hr| {
         const v = vec.splat(0.5) * (hr.normal + vec.one);
-        return color.fromVec3(v);
+        return v;
     }
 
     const unit_direction = vec.unit(r.direction());
     const a = 0.5 * (vec.y(unit_direction) + 1.0);
     const blue: Vec3 = .{ 0.5, 0.7, 1.0 };
     const v = vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue;
-    return color.fromVec3(v);
+    return v;
+}
+
+fn getRay(w: usize, h: usize) Ray {
+    const wd: f64 = @floatFromInt(w);
+    const hd: f64 = @floatFromInt(h);
+    const offset = sampleSquare();
+    const pixel_sample = origin_pixel_location +
+        vec.splat(wd + vec.x(offset)) * pixel_delta_u +
+        vec.splat(hd + vec.y(offset)) * pixel_delta_v;
+    
+    const ray_origin = center;
+    const ray_direction = pixel_sample - ray_origin;
+
+    return .{
+        ._origin = ray_origin,
+        ._direction = ray_direction,
+    };
+}
+
+fn sampleSquare() Vec3 {
+    return .{
+        rwt.getRandom(f64) - 0.5,
+        rwt.getRandom(f64) - 0.5,
+        0.0,
+    };
 }
