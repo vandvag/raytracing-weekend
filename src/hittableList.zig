@@ -32,6 +32,7 @@ pub const HittableList = struct {
     pub fn hit(self: *Self, r: Ray, interval: Interval) ?HitRecord {
         var closest_so_far = interval.max;
         var hit_record: ?HitRecord = null;
+
         for (self.objects.items) |obj| {
             const hr = obj.hit(r, .{ .min = interval.min, .max = closest_so_far }) orelse continue;
 
