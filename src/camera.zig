@@ -1,4 +1,5 @@
 const std = @import("std");
+const builtin = @import("builtin");
 
 const hittable = @import("hittable.zig");
 const Hittable = hittable.Hittable;
@@ -16,8 +17,10 @@ const Ray = @import("ray.zig").Ray;
 
 const Interval = @import("interval.zig").Interval;
 
-const img_width = 400;
+// TODO: Later, these should be input for the cli
+const img_width = if (builtin.mode == .ReleaseFast) 4000 else 400;
 const aspect_ratio = 16.0 / 9.0;
+
 const width_float: comptime_float = @floatFromInt(img_width);
 const img_height = blk: {
     const height = (img_width + 0.0) / aspect_ratio;
