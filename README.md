@@ -2,4 +2,6 @@
 
 This is my attempt at implementing the "Raytracing in a weekend" book.
 
-The book can be found [here](https://raytracing.github.io/books/RayTracingInOneWeekend.html#movingcameracodeintoitsownclass)
+The book can be found:
+
+[_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
