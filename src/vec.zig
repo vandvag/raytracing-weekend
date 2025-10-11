@@ -1,5 +1,7 @@
 const std = @import("std");
 
+const rtw = @import("rtweekend.zig");
+
 pub const Vec3 = @Vector(3, f64);
 
 pub const zero = Vec3{ 0, 0, 0 };
@@ -59,4 +61,37 @@ pub fn splat(n: anytype) Vec3 {
         .float, .comptime_float => @splat(n),
         else => @compileError("splat only works for int and float scalars"),
     };
+}
+
+pub fn random() Vec3 {
+    return .{
+        rtw.getRandom(f64),
+        rtw.getRandom(f64),
+        rtw.getRandom(f64),
+    };
+}
+
+pub fn randomRange(min: f64, max: f64) Vec3 {
+    return .{
+        rtw.getRandomInRange(f64, min, max),
+        rtw.getRandomInRange(f64, min, max),
+        rtw.getRandomInRange(f64, min, max),
+    };
+}
+
+// TODO: Highly unlikely that it will be needed, but it would be good to add a max iteration limit here
+pub fn randomUnitVector() Vec3 {
+    while (true) {
+        const p = random();
+        const l = len2(p);
+        if (1.0e-160 <= l and l <= 1.0) {
+            return unit(p);
+        }
+    }
+}
+
+pub fn randomOnHemishere(normal: Vec3) Vec3 {
+    const on_unit_shere = randomUnitVector();
+
+    return if (dot(on_unit_shere, normal) > 0.0) on_unit_shere else -on_unit_shere;
 }

@@ -20,9 +20,10 @@ const Ray = @import("ray.zig").Ray;
 const Interval = @import("interval.zig").Interval;
 
 // TODO: Later, these should be input for the cli
-const img_width = if (builtin.mode == .ReleaseFast) 4000 else 400;
+const img_width = if (builtin.mode == .ReleaseFast) 1000 else 400;
 const aspect_ratio = 16.0 / 9.0;
 const samples_per_pixel = if (builtin.mode == .ReleaseFast) 100 else 10;
+const max_depth = if (builtin.mode == .ReleaseFast) 50 else 10;
 
 const width_float: comptime_float = @floatFromInt(img_width);
 const img_height = blk: {
@@ -70,7 +71,7 @@ pub fn render(world: *HittableList) !void {
             var pixel_color = vec.zero;
             for (0..samples_per_pixel) |_| {
                 const ray = getRay(w, h);
-                pixel_color += rayColor(ray, world);
+                pixel_color += rayColor(ray, max_depth, world);
             }
 
             pixel_color /= vec.splat(samples_per_pixel);
@@ -81,11 +82,15 @@ pub fn render(world: *HittableList) !void {
     try out.flush();
 }
 
-fn rayColor(r: Ray, world: *HittableList) Vec3 {
+fn rayColor(r: Ray, depth: usize, world: *HittableList) Vec3 {
+    if (depth <= 0) {
+        return vec.zero;
+    }
+
     const init: Interval = .{ .min = 0.0, .max = std.math.inf(f64) };
     if (world.hit(r, init)) |hr| {
-        const v = vec.splat(0.5) * (hr.normal + vec.one);
-        return v;
+        const direction = vec.randomOnHemishere(hr.normal);
+        return vec.splat(0.5) * rayColor(.{ ._origin = hr.point, ._direction = direction }, depth - 1, world);
     }
 
     const unit_direction = vec.unit(r.direction());
@@ -102,7 +107,7 @@ fn getRay(w: usize, h: usize) Ray {
     const pixel_sample = origin_pixel_location +
         vec.splat(wd + vec.x(offset)) * pixel_delta_u +
         vec.splat(hd + vec.y(offset)) * pixel_delta_v;
-    
+
     const ray_origin = center;
     const ray_direction = pixel_sample - ray_origin;
 
