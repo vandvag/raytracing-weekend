@@ -32,9 +32,11 @@ pub fn main() !void {
     };
     const material_left: mat.Metal = .{
         .albedo = .{ 0.8, 0.8, 0.8 },
+        .fuzz = 0.3,
     };
     const material_right: mat.Metal = .{
         .albedo = .{ 0.8, 0.6, 0.2 },
+        .fuzz = 1.0,
     };
 
     const sph1: Hittable = .{

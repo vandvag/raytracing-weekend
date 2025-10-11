@@ -47,11 +47,12 @@ pub const Lambertian = struct {
 
 pub const Metal = struct {
     albedo: vec.Vec3,
+    fuzz: f64,
 
     const Self = @This();
 
     pub fn scatter(self: Self, r_in: ray.Ray, hr: hit.HitRecord) ?Scatter {
-        const reflected = vec.reflect(r_in.direction(), hr.normal);
+        const reflected = vec.unit(vec.reflect(r_in.direction(), hr.normal)) + (vec.splat(self.fuzz) * vec.randomUnitVector());
 
         return .{
             .ray = .{
