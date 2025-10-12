@@ -30,9 +30,12 @@ pub fn main() !void {
     const material_center: mat.Lambertian = .{
         .albedo = .{ 0.1, 0.2, 0.5 },
     };
-    const material_left: mat.Metal = .{
-        .albedo = .{ 0.8, 0.8, 0.8 },
-        .fuzz = 0.3,
+    // const material_left: mat.Metal = .{
+    //     .albedo = .{ 0.8, 0.8, 0.8 },
+    //     .fuzz = 0.3,
+    // };
+    const material_left: mat.Dielectric = .{
+        .refraction_index = 1.0 / 1.33,
     };
     const material_right: mat.Metal = .{
         .albedo = .{ 0.8, 0.6, 0.2 },
@@ -66,7 +69,7 @@ pub fn main() !void {
             .center = .{ -1.0, 0.0, -1.0 },
             .radius = 0.5,
             .material = .{
-                .Metal = material_left,
+                .Dielectric = material_left,
             },
         },
     };

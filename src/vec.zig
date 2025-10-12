@@ -107,3 +107,11 @@ pub fn nearZero(v: Vec3) bool {
 pub fn reflect(v: Vec3, n: Vec3) Vec3 {
     return v - splat(2.0 * dot(v, n)) * n;
 }
+
+pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
+    const cos_theta = @min(dot(-uv, n), 1.0);
+    const r_out_perp = splat(etai_over_etat) * (uv + splat(cos_theta) * n);
+    const r_out_parallel = - splat(std.math.sqrt(@abs(1.0 - len2(r_out_perp)))) * n;
+
+    return r_out_perp + r_out_parallel;
+}

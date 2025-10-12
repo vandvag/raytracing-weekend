@@ -14,12 +14,14 @@ pub const Scatter = struct {
 pub const Material = union(enum) {
     Lambertian: Lambertian,
     Metal: Metal,
+    Dielectric: Dielectric,
 
     const Self = @This();
     pub fn scatter(self: Self, r_in: ray.Ray, hr: hit.HitRecord) ?Scatter {
         return switch (self) {
             .Lambertian => |l| l.scatter(hr),
             .Metal => |m| m.scatter(r_in, hr),
+            .Dielectric => |d| d.scatter(r_in, hr),
         };
     }
 };
@@ -60,6 +62,35 @@ pub const Metal = struct {
                 ._direction = reflected,
             },
             .attenuation = self.albedo,
+        };
+    }
+};
+
+pub const Dielectric = struct {
+    refraction_index: f64,
+
+    const Self = @This();
+
+    pub fn scatter(self: Self, r_in: ray.Ray, hr: hit.HitRecord) ?Scatter {
+        const ri = if (hr.front_face) 1.0 / self.refraction_index else self.refraction_index;
+
+        const unit_direction = vec.unit(r_in.direction());
+        const cos_theta = @min(vec.dot(-unit_direction, hr.normal), 1.0);
+        const sin_theta = std.math.sqrt(1.0 - cos_theta * cos_theta);
+
+        const cannot_refract = ri * sin_theta > 1.0;
+        const direction = if (cannot_refract) {
+            vec.reflect(unit_direction, hr.normal);
+        } else {
+            vec.refract(unit_direction, hr.normal);
+        };
+
+        return .{
+            .ray = .{
+                ._origin = hr.point,
+                ._direction = direction,
+            },
+            .attenuation = vec.one,
         };
     }
 };
