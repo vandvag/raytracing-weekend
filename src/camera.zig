@@ -16,21 +16,25 @@ const Vec3 = vec.Vec3;
 
 // TODO: Later, these should be input for the cli
 /// Rendered image width in pixel count
-const img_width = if (builtin.mode == .ReleaseFast) 2000 else 400;
+const img_width = if (builtin.mode == .ReleaseFast) 1200 else 400;
 /// Ratio of image width over height
 const aspect_ratio = 16.0 / 9.0;
 /// Count of random samples for each pixel
-const samples_per_pixel = if (builtin.mode == .ReleaseFast) 100 else 10;
+const samples_per_pixel = if (builtin.mode == .ReleaseFast) 500 else 10;
 /// Maximum number of ray bounces into scene
 const max_depth = if (builtin.mode == .ReleaseFast) 50 else 10;
 /// Vertical view angle (field of view)
-const vfov = 90;
+const vfov = 20;
 /// Point camera is looking from
-const look_from: vec.Vec3 = .{-2.0, 2.0, 1.0};
+const look_from: vec.Vec3 = .{13.0, 2.0, 3.0};
 /// Point camera is looking at
-const look_at: vec.Vec3 = .{ 0.0, 0.0, -1.0 };
+const look_at: vec.Vec3 = .{ 0.0, 0.0, 0.0 };
 /// Camera relative "up" direction
 const vup: vec.Vec3 = .{ 0.0, 1.0, 0.0 };
+/// Variation angle of rays through each pixel
+const defocus_angle = 0.6;
+/// Distance from camera lookfrom point to plane of perfect focus
+const focus_distance = 10.0;
 
 const width_float: comptime_float = @floatFromInt(img_width);
 const img_height = blk: {
@@ -42,10 +46,9 @@ const img_height = blk: {
 const center = look_from;
 
 // Determine viewport dimensions
-const focal_length = vec.len(look_from - look_at);
 const theta = rwt.deg2rad(vfov);
 const h = std.math.tan(theta / 2);
-const viewport_height = 2.0 * h * focal_length;
+const viewport_height = 2.0 * h * focus_distance;
 const viewport_width = blk: {
     const img_width_f64: comptime_float = @floatFromInt(img_width);
     const img_height_f64: comptime_float = @floatFromInt(img_height);
@@ -69,8 +72,13 @@ const pixel_delta_u = viewport_u / vec.splat(img_width);
 const pixel_delta_v = viewport_v / vec.splat(img_height);
 
 // Calculate the location of the upper left pixel.
-const viewport_upper_left = center - vec.splat(focal_length) * w - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
+const viewport_upper_left = center - vec.splat(focus_distance) * w - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
 const origin_pixel_location = viewport_upper_left + (pixel_delta_u + pixel_delta_v) * vec.splat(0.5);
+
+// Calculate the camera defocus disk basis vectors.
+const defocus_radius = focus_distance * std.math.tan(rwt.deg2rad(defocus_angle / 2.0));
+const defocus_disk_u = u * vec.splat(defocus_radius);
+const defocus_disk_v = v * vec.splat(defocus_radius);
 
 pub fn render(world: *HittableList) !void {
     var wbuffer: [4096]u8 = undefined;
@@ -124,6 +132,8 @@ fn rayColor(r: Ray, depth: usize, world: *HittableList) Vec3 {
     return vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue;
 }
 
+/// Construct a camera ray originating from the defocus disk and directed at a randomly
+/// sampled point around the pixel location (width, height)
 fn getRay(width: usize, height: usize) Ray {
     const wd: f64 = @floatFromInt(width);
     const hd: f64 = @floatFromInt(height);
@@ -132,13 +142,18 @@ fn getRay(width: usize, height: usize) Ray {
         vec.splat(wd + vec.x(offset)) * pixel_delta_u +
         vec.splat(hd + vec.y(offset)) * pixel_delta_v;
 
-    const ray_origin = center;
+    const ray_origin = if (defocus_angle <= 0.0) center else defocusDiskSample();
     const ray_direction = pixel_sample - ray_origin;
 
     return .{
         ._origin = ray_origin,
         ._direction = ray_direction,
     };
+}
+
+fn defocusDiskSample() Vec3 {
+    const p = vec.randomInUnitDisk();
+    return center + (vec.splat(vec.x(p)) * defocus_disk_u) + (vec.splat(vec.y(p)) * defocus_disk_v);
 }
 
 fn sampleSquare() Vec3 {

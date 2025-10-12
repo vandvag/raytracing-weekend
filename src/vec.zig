@@ -111,7 +111,16 @@ pub fn reflect(v: Vec3, n: Vec3) Vec3 {
 pub fn refract(uv: Vec3, n: Vec3, etai_over_etat: f64) Vec3 {
     const cos_theta = @min(dot(-uv, n), 1.0);
     const r_out_perp = splat(etai_over_etat) * (uv + splat(cos_theta) * n);
-    const r_out_parallel = - splat(std.math.sqrt(@abs(1.0 - len2(r_out_perp)))) * n;
+    const r_out_parallel = -splat(std.math.sqrt(@abs(1.0 - len2(r_out_perp)))) * n;
 
     return r_out_perp + r_out_parallel;
+}
+
+pub fn randomInUnitDisk() Vec3 {
+    while (true) {
+        const p: Vec3 = .{ rtw.getRandomInRange(f64, -1.0, 1.0), rtw.getRandomInRange(f64, -1.0, 1.0), 0.0 };
+        if (len2(p) < 1.0) {
+            return p;
+        }
+    }
 }
