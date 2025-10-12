@@ -35,7 +35,10 @@ pub fn main() !void {
     //     .fuzz = 0.3,
     // };
     const material_left: mat.Dielectric = .{
-        .refraction_index = 1.0 / 1.33,
+        .refraction_index = 1.50,
+    };
+    const material_bubble: mat.Dielectric =. {
+        .refraction_index = 1.00 / 1.50,
     };
     const material_right: mat.Metal = .{
         .albedo = .{ 0.8, 0.6, 0.2 },
@@ -77,6 +80,17 @@ pub fn main() !void {
 
     const sph4: Hittable = .{
         .Sphere = .{
+            .center = .{ -1.0, 0.0, -1.0 },
+            .radius = 0.4,
+            .material = .{
+                .Dielectric = material_bubble,
+            },
+        },
+    };
+    try world.add(sph4);
+
+    const sph5: Hittable = .{
+        .Sphere = .{
             .center = .{ 1.0, 0.0, -1.0 },
             .radius = 0.5,
             .material = .{
@@ -84,7 +98,7 @@ pub fn main() !void {
             },
         },
     };
-    try world.add(sph4);
+    try world.add(sph5);
 
     try Camera.render(&world);
 }

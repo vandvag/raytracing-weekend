@@ -6,6 +6,8 @@ const ray = @import("ray.zig");
 
 const hit = @import("hittable.zig");
 
+const rtw = @import("rtweekend.zig");
+
 pub const Scatter = struct {
     ray: ray.Ray,
     attenuation: vec.Vec3,
@@ -67,6 +69,8 @@ pub const Metal = struct {
 };
 
 pub const Dielectric = struct {
+    /// Refractive index in vacuum or air, or the ratio of the material's refractive index
+    /// over the refractive index of the enclosing media
     refraction_index: f64,
 
     const Self = @This();
@@ -79,11 +83,13 @@ pub const Dielectric = struct {
         const sin_theta = std.math.sqrt(1.0 - cos_theta * cos_theta);
 
         const cannot_refract = ri * sin_theta > 1.0;
-        const direction = if (cannot_refract) {
-            vec.reflect(unit_direction, hr.normal);
+
+        var direction: vec.Vec3 = undefined;
+        if (cannot_refract or reflectance(cos_theta, ri) > rtw.getRandom(f64)) {
+            direction = vec.reflect(unit_direction, hr.normal);
         } else {
-            vec.refract(unit_direction, hr.normal);
-        };
+            direction = vec.refract(unit_direction, hr.normal, ri);
+        }
 
         return .{
             .ray = .{
@@ -92,5 +98,13 @@ pub const Dielectric = struct {
             },
             .attenuation = vec.one,
         };
+    }
+
+    /// Use Schlick's approximation for reflectance
+    fn reflectance(cos: f64, refraction_index: f64) f64 {
+        var r0 = (1.0 - refraction_index) / (1.0 + refraction_index);
+        r0 = r0 * r0;
+
+        return r0 + (1 - r0) * std.math.pow(f64, 1 - cos, 5);
     }
 };
