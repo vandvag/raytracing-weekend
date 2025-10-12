@@ -15,12 +15,13 @@ const Sphere = @import("sphere.zig").Sphere;
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
 const mat = @import("material.zig");
+const rtw = @import("rtweekend.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
-    var world = try scene1(allocator);
+    var world = try finalScene(allocator);
     defer world.deinit();
 
     try Camera.render(&world);
@@ -43,7 +44,7 @@ fn scene1(allocator: std.mem.Allocator) !HittableList {
     const material_left: mat.Dielectric = .{
         .refraction_index = 1.50,
     };
-    const material_bubble: mat.Dielectric =. {
+    const material_bubble: mat.Dielectric = .{
         .refraction_index = 1.00 / 1.50,
     };
     const material_right: mat.Metal = .{
@@ -115,10 +116,10 @@ fn scene2(allocator: std.mem.Allocator) !HittableList {
     var world = HittableList.init(allocator);
 
     const material_left: mat.Lambertian = .{
-        .albedo = .{0.0, 0.0, 1.0},
+        .albedo = .{ 0.0, 0.0, 1.0 },
     };
     const material_right: mat.Lambertian = .{
-        .albedo = .{1.0, 0.0, 0.0},
+        .albedo = .{ 1.0, 0.0, 0.0 },
     };
 
     const sph1: Hittable = .{
@@ -144,6 +145,89 @@ fn scene2(allocator: std.mem.Allocator) !HittableList {
     };
 
     try world.add(sph2);
+
+    return world;
+}
+
+fn finalScene(allocator: std.mem.Allocator) !HittableList {
+    var world = HittableList.init(allocator);
+
+    const ground_material: mat.Lambertian = .{ .albedo = .{ 0.5, 0.5, 0.5 } };
+
+    const ground: Sphere = .{
+        .center = .{ 0.0, -1000.0, 0.0 },
+        .radius = 1000.0,
+        .material = .{ .Lambertian = ground_material },
+    };
+    try world.add(.{ .Sphere = ground });
+
+    var i: i8 = -11;
+    while (i < 11) {
+        const a: f64 = @floatFromInt(i);
+        var j: i8 = -11;
+        while (j < 11) {
+            const b: f64 = @floatFromInt(j);
+            const choose_mat = rtw.getRandom(f64);
+            const center: Vec3 = .{ a + 0.9 * rtw.getRandom(f64), 0.2, b + 0.9 * rtw.getRandom(f64) };
+
+            const v: Vec3 = .{ 4.0, 0.2, 0.0 };
+            if (vec.len(center - v) > 0.9) {
+                var sphere_mat: mat.Material = undefined;
+
+                if (choose_mat < 0.8) {
+                    sphere_mat = .{ .Lambertian = .{ .albedo = vec.random() * vec.random() } };
+                } else if (choose_mat < 0.95) {
+                    sphere_mat = .{
+                        .Metal = .{
+                            .albedo = vec.random() * vec.random(),
+                            .fuzz = rtw.getRandomInRange(f64, 0.0, 0.5),
+                        },
+                    };
+                } else {
+                    sphere_mat = .{
+                        .Dielectric = .{ .refraction_index = 1.5 },
+                    };
+                }
+
+                try world.add(.{
+                    .Sphere = .{
+                        .center = center,
+                        .radius = 0.2,
+                        .material = sphere_mat,
+                    },
+                });
+            }
+            j += 1;
+        }
+        i += 1;
+    }
+
+    const mat1: mat.Material = .{ .Dielectric = .{ .refraction_index = 1.5 } };
+    try world.add(.{
+        .Sphere = .{
+            .center = .{ 0.0, 1.0, 0.0 },
+            .radius = 1.0,
+            .material = mat1,
+        },
+    });
+
+    const mat2: mat.Material = .{ .Lambertian = .{ .albedo = .{ 0.4, 0.2, 0.1 } } };
+    try world.add(.{
+        .Sphere = .{
+            .center = .{ -4.0, 1.0, 0.0 },
+            .radius = 1.0,
+            .material = mat2,
+        },
+    });
+
+    const mat3: mat.Material = .{ .Metal = .{ .albedo = .{ 0.7, 0.6, 0.5 }, .fuzz = 0.0 } };
+    try world.add(.{
+        .Sphere = .{
+            .center = .{ -4.0, 1.0, 0.0 },
+            .radius = 1.0,
+            .material = mat3,
+        },
+    });
 
     return world;
 }
