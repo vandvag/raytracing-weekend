@@ -1,31 +1,36 @@
 const std = @import("std");
 const builtin = @import("builtin");
 
-const rwt = @import("rtweekend.zig");
-
-const hittable = @import("hittable.zig");
-const Hittable = hittable.Hittable;
-
-const hitlist = @import("hittableList.zig");
-const HittableList = hitlist.HittableList;
-
 const color = @import("color.zig");
 const Color = color.Color;
-
+const hitlist = @import("hittableList.zig");
+const HittableList = hitlist.HittableList;
+const hittable = @import("hittable.zig");
+const Hittable = hittable.Hittable;
+const Interval = @import("interval.zig").Interval;
+const mat = @import("material.zig");
+const Ray = @import("ray.zig").Ray;
+const rwt = @import("rtweekend.zig");
 const vec = @import("vec.zig");
 const Vec3 = vec.Vec3;
 
-const Ray = @import("ray.zig").Ray;
-
-const Interval = @import("interval.zig").Interval;
-
-const mat = @import("material.zig");
-
 // TODO: Later, these should be input for the cli
-const img_width = if (builtin.mode == .ReleaseFast) 1000 else 400;
+/// Rendered image width in pixel count
+const img_width = if (builtin.mode == .ReleaseFast) 2000 else 400;
+/// Ratio of image width over height
 const aspect_ratio = 16.0 / 9.0;
+/// Count of random samples for each pixel
 const samples_per_pixel = if (builtin.mode == .ReleaseFast) 100 else 10;
+/// Maximum number of ray bounces into scene
 const max_depth = if (builtin.mode == .ReleaseFast) 50 else 10;
+/// Vertical view angle (field of view)
+const vfov = 90;
+/// Point camera is looking from
+const look_from: vec.Vec3 = .{-2.0, 2.0, 1.0};
+/// Point camera is looking at
+const look_at: vec.Vec3 = .{ 0.0, 0.0, -1.0 };
+/// Camera relative "up" direction
+const vup: vec.Vec3 = .{ 0.0, 1.0, 0.0 };
 
 const width_float: comptime_float = @floatFromInt(img_width);
 const img_height = blk: {
@@ -33,23 +38,38 @@ const img_height = blk: {
     const height_int: comptime_int = @intFromFloat(height);
     break :blk if (height_int < 1) 1 else height_int;
 };
-const center = vec.zero;
-const focal_length = 1.0;
-const viewport_height = 2.0;
+
+const center = look_from;
+
+// Determine viewport dimensions
+const focal_length = vec.len(look_from - look_at);
+const theta = rwt.deg2rad(vfov);
+const h = std.math.tan(theta / 2);
+const viewport_height = 2.0 * h * focal_length;
 const viewport_width = blk: {
     const img_width_f64: comptime_float = @floatFromInt(img_width);
     const img_height_f64: comptime_float = @floatFromInt(img_height);
     const ratio: comptime_float = img_width_f64 / img_height_f64;
     break :blk ratio * viewport_height;
 };
-const viewport_u: Vec3 = .{ viewport_width, 0.0, 0.0 };
-const viewport_v: Vec3 = .{ 0.0, -viewport_height, 0.0 };
+
+/// Camera frame basis vectors
+const w = vec.unit(look_from - look_at);
+const u = vec.unit(vec.cross3(vup, w));
+const v = vec.cross3(w, u);
+
+// Calculate the vectors accross the horizontal and down the vertical viewport edges.
+/// Vector across the viewport horizontal edge
+const viewport_u = vec.splat(viewport_width) * u;
+/// Vector down viewport vertical edge
+const viewport_v = vec.splat(viewport_height) * (-v);
+
+// Calculate horizontal and vertical delta vectors from pixel to pixel.
 const pixel_delta_u = viewport_u / vec.splat(img_width);
 const pixel_delta_v = viewport_v / vec.splat(img_height);
-const viewport_upper_left: Vec3 = blk: {
-    const focal: Vec3 = .{ 0.0, 0.0, focal_length };
-    break :blk center - focal - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
-};
+
+// Calculate the location of the upper left pixel.
+const viewport_upper_left = center - vec.splat(focal_length) * w - viewport_u / vec.splat(2.0) - viewport_v / vec.splat(2.0);
 const origin_pixel_location = viewport_upper_left + (pixel_delta_u + pixel_delta_v) * vec.splat(0.5);
 
 pub fn render(world: *HittableList) !void {
@@ -67,12 +87,12 @@ pub fn render(world: *HittableList) !void {
 
     try out.print("P3\n{d} {d}\n255\n", .{ img_width, img_height });
 
-    for (0..img_height) |h| {
+    for (0..img_height) |height| {
         defer progress.completeOne();
-        for (0..img_width) |w| {
+        for (0..img_width) |width| {
             var pixel_color = vec.zero;
             for (0..samples_per_pixel) |_| {
-                const ray = getRay(w, h);
+                const ray = getRay(width, height);
                 pixel_color += rayColor(ray, max_depth, world);
             }
 
@@ -100,13 +120,13 @@ fn rayColor(r: Ray, depth: usize, world: *HittableList) Vec3 {
     const unit_direction = vec.unit(r.direction());
     const a = 0.5 * (vec.y(unit_direction) + 1.0);
     const blue: Vec3 = .{ 0.5, 0.7, 1.0 };
-    const v = vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue;
-    return v;
+
+    return vec.splat(1.0 - a) * vec.one + vec.splat(a) * blue;
 }
 
-fn getRay(w: usize, h: usize) Ray {
-    const wd: f64 = @floatFromInt(w);
-    const hd: f64 = @floatFromInt(h);
+fn getRay(width: usize, height: usize) Ray {
+    const wd: f64 = @floatFromInt(width);
+    const hd: f64 = @floatFromInt(height);
     const offset = sampleSquare();
     const pixel_sample = origin_pixel_location +
         vec.splat(wd + vec.x(offset)) * pixel_delta_u +

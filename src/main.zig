@@ -20,9 +20,15 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
 
+    var world = try scene1(allocator);
+    defer world.deinit();
+
+    try Camera.render(&world);
+}
+
+fn scene1(allocator: std.mem.Allocator) !HittableList {
     // World stuff
     var world = HittableList.init(allocator);
-    defer world.deinit();
 
     const material_ground: mat.Lambertian = .{
         .albedo = .{ 0.8, 0.8, 0.0 },
@@ -100,5 +106,44 @@ pub fn main() !void {
     };
     try world.add(sph5);
 
-    try Camera.render(&world);
+    return world;
+}
+
+fn scene2(allocator: std.mem.Allocator) !HittableList {
+    const R = std.math.cos(std.math.pi / 4.0);
+
+    var world = HittableList.init(allocator);
+
+    const material_left: mat.Lambertian = .{
+        .albedo = .{0.0, 0.0, 1.0},
+    };
+    const material_right: mat.Lambertian = .{
+        .albedo = .{1.0, 0.0, 0.0},
+    };
+
+    const sph1: Hittable = .{
+        .Sphere = .{
+            .center = .{ -R, 0.0, -1.0 },
+            .radius = R,
+            .material = .{
+                .Lambertian = material_left,
+            },
+        },
+    };
+
+    try world.add(sph1);
+
+    const sph2: Hittable = .{
+        .Sphere = .{
+            .center = .{ R, 0.0, -1.0 },
+            .radius = R,
+            .material = .{
+                .Lambertian = material_right,
+            },
+        },
+    };
+
+    try world.add(sph2);
+
+    return world;
 }

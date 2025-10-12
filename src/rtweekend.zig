@@ -15,3 +15,7 @@ pub fn getRandom(comptime T: type) T {
 pub fn getRandomInRange(comptime T: type, min: T, max: T) T {
     return min + (max - min) * getRandom(T);
 }
+
+pub fn deg2rad(x: f64) f64 {
+    return std.math.pi * x / 180.0;
+}
