@@ -2,7 +2,7 @@ const std = @import("std");
 const Progress = std.Progress;
 const builtin = @import("builtin");
 
-const Camera = @import("camera.zig");
+const Camera = @import("camera/camera.zig").Camera;
 const color = @import("color.zig");
 const Color = color.Color;
 const hitlist = @import("hittableList.zig");
@@ -24,7 +24,21 @@ pub fn main() !void {
     var world = try finalScene(allocator);
     defer world.deinit();
 
-    try Camera.render(&world);
+    var builder = Camera.init();
+    const cam = builder
+        .aspect_ratio(16.0 / 9.0)
+        .image_width(1000)
+    .samples_per_pixel(100)
+    .max_depth(20)
+    .vfov(20.0)
+    .look_from(.{13.0, 2.0, 3.0})
+    .look_at(vec.zero)
+    .vup(.{0.0, 1.0, 0.0})
+    .defocus_angle(0.6 * 2.0 * std.math.pi / 180.0)
+    .focus_distance(10.0)
+        .build();
+
+    try cam.render(&world);
 }
 
 fn scene1(allocator: std.mem.Allocator) !HittableList {
