@@ -68,23 +68,49 @@ pub const Camera = struct {
         });
         defer progress.end();
 
+        const gpa = std.heap.smp_allocator;
+
+        var pixel_colors: []Color = try gpa.alloc(Color, self.img_height * self.img_width);
+
+        var pool: std.Thread.Pool = undefined;
+        try pool.init(.{ .allocator = gpa });
+
+        var wg: std.Thread.WaitGroup = .{};
+
         try out.print("P3\n{d} {d}\n255\n", .{ self.img_width, self.img_height });
 
         for (0..self.img_height) |height| {
-            defer progress.completeOne();
-            for (0..self.img_width) |width| {
-                var pixel_color = vec.zero;
-                for (0..self.samples_per_pixel) |_| {
-                    const ray = self.getRay(width, height);
-                    pixel_color += ray.color(self.max_depth, world);
-                }
+            const start = height * self.img_width;
+            const out_slice = pixel_colors[start..];
+            pool.spawnWg(&wg, computeRow, .{ self, height, world, out_slice, progress });
+        }
 
-                pixel_color /= vec.splat(self.samples_per_pixel);
-                try out.print("{f}", .{color.fromVec3(pixel_color)});
-            }
+        pool.waitAndWork(&wg);
+
+        for (pixel_colors) |current_color| {
+            try out.print("{f}\n", .{current_color});
         }
 
         try out.flush();
+    }
+
+    fn computeRow(self: Camera, height: usize, world: *HittableList, out_slice: []Color, progress: std.Progress.Node) void {
+        defer progress.completeOne();
+
+        for (0..self.img_width) |width| {
+            out_slice[width] = self.computeColor(width, height, world);
+        }
+    }
+
+    fn computeColor(self: Camera, width: usize, height: usize, world: *HittableList) Color {
+        var pixel_color = vec.zero;
+        for (0..self.samples_per_pixel) |_| {
+            const ray = self.getRay(width, height);
+            pixel_color += ray.color(self.max_depth, world);
+        }
+
+        pixel_color /= vec.splat(self.samples_per_pixel);
+        return Color.fromVec3(pixel_color);
     }
 
     /// Construct a camera ray originating from the defocus disk and directed at a randomly
