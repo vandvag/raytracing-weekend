@@ -42,29 +42,13 @@ pub const HitRecord = struct {
     }
 };
 
-pub const Hittable = struct {
-    impl: *anyopaque,
-    hit_fn: *const fn (*anyopaque, Ray, Interval) ?HitRecord,
+pub const Hittable = union(enum) {
+    Sphere: Sphere,
 
     const Self = @This();
-
-    pub fn init(impl_obj: anytype) Self {
-        const T = @TypeOf(impl_obj);
-
-        const gen = struct {
-            fn hit(impl: *anyopaque, r: Ray, interval: Interval) ?HitRecord {
-                const self: T = @ptrCast(@alignCast(impl));
-                return self.hit(r, interval);
-            }
-        };
-
-        return Self{
-            .impl = @constCast(impl_obj),
-            .hit_fn = gen.hit,
-        };
-    }
-
     pub fn hit(self: Self, r: Ray, interval: Interval) ?HitRecord {
-        return self.hit_fn(self.impl, r, interval);
+        return switch (self) {
+            .Sphere => |s| s.hit(r, interval),
+        };
     }
 };
