@@ -6,4 +6,4 @@ The book can be found:
 
 [_Ray Tracing in One Weekend_](https://raytracing.github.io/books/RayTracingInOneWeekend.html)
 
-![final_scene](out/final.ppm)
+![final_scene](out/final.png)
